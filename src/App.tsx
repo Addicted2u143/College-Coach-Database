@@ -44,7 +44,18 @@ export default function App() {
       try {
         setLoading(true);
         setErr(null);
-        const rows = await loadCoachRows();
+        // find CSV URL for current tab
+        const tabDef =
+          ((TABS as any[]) || []).find((t) =>
+            [t.id, t.key, t.value, t.name, t.label].some((x: any) => String(x) === String(tab))
+          ) || ((TABS as any[])[0] as any) || null;
+        const csvUrl = tabDef?.csvUrl ?? tabDef?.csv ?? tabDef?.url ?? "";
+        let rows: AnyRow[] = [];
+        if (csvUrl) {
+          rows = await loadCoachRows(csvUrl, tab);
+        } else {
+          rows = [];
+        }
         if (!mounted) return;
         setAllRows(Array.isArray(rows) ? rows : []);
       } catch (e: any) {
@@ -58,13 +69,14 @@ export default function App() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [tab]);
 
   // Load favorites
   useEffect(() => {
     try {
       const saved = loadFavorites?.();
-      if (Array.isArray(saved)) setFavorites(new Set(saved));
+      if (saved instanceof Set) setFavorites(saved);
+      else if (Array.isArray(saved)) setFavorites(new Set(saved));
     } catch {
       // ignore
     }
@@ -73,7 +85,7 @@ export default function App() {
   // Persist favorites
   useEffect(() => {
     try {
-      saveFavorites?.(Array.from(favorites));
+      saveFavorites?.(favorites);
     } catch {
       // ignore
     }
