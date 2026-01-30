@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 
-type AnyRow = Record<string, any>;
-
+type AnyRow = any;
 type TabItem = { id: string; label: string };
 
 type Props = {
@@ -19,40 +18,87 @@ type Props = {
   onToggleFavorite: (row: AnyRow) => void;
 };
 
-function getField(row: AnyRow, key: string) {
-  return row?.[key] ?? row?.[key[0].toUpperCase() + key.slice(1)];
+// normalize keys: "School Website" -> "schoolwebsite"
+function normKey(s: string) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function getField(row: AnyRow, keys: string | string[]) {
+  if (!row) return undefined;
+  const list = Array.isArray(keys) ? keys : [keys];
+
+  // Fast path: direct access + TitleCase variant
+  for (const k of list) {
+    if (k in row) return row[k];
+    const title = k ? k[0].toUpperCase() + k.slice(1) : k;
+    if (title in row) return row[title];
+  }
+
+  // Robust path: case/space-insensitive match
+  const map = new Map<string, any>();
+  for (const rk of Object.keys(row)) map.set(normKey(rk), row[rk]);
+
+  for (const k of list) {
+    const hit = map.get(normKey(k));
+    if (hit !== undefined) return hit;
+  }
+
+  return undefined;
 }
 
 function rowTab(row: AnyRow) {
-  return String(getField(row, "tab") ?? "");
+  return String(getField(row, ["tab", "division", "sheet", "group"]) ?? "");
 }
 
 function school(row: AnyRow) {
-  return String(getField(row, "school") ?? getField(row, "name") ?? "");
+  return String(getField(row, ["school", "name", "program", "college"]) ?? "");
 }
 
 function conference(row: AnyRow) {
-  return String(getField(row, "conference") ?? "");
+  return String(getField(row, ["conference", "conf"]) ?? "");
 }
 
 function website(row: AnyRow) {
-  return String(getField(row, "website") ?? getField(row, "schoolWebsite") ?? "");
+  return String(
+    getField(row, ["website", "schoolWebsite", "school website", "school url", "url"]) ?? ""
+  );
 }
 
 function questionnaire(row: AnyRow) {
-  return String(getField(row, "questionnaire") ?? getField(row, "recruitingQuestionnaire") ?? "");
+  return String(
+    getField(row, [
+      "questionnaire",
+      "recruitingQuestionnaire",
+      "recruiting questionnaire",
+      "questionnaire link",
+    ]) ?? ""
+  );
 }
 
 function staff(row: AnyRow) {
-  return String(getField(row, "staff") ?? getField(row, "staffDirectory") ?? "");
+  return String(
+    getField(row, ["staff", "staffDirectory", "staff directory", "staff link"]) ?? ""
+  );
 }
 
 function favKey(row: AnyRow) {
   return `${rowTab(row)}__${school(row)}`.toLowerCase();
 }
 
+function normalizeUrl(s: string) {
+  const v = (s || "").trim();
+  if (!v) return "";
+  if (/^https?:\/\//i.test(v)) return v;
+  // If sheet has "www.school.edu" without https, fix it
+  if (/^www\./i.test(v)) return `https://${v}`;
+  return v;
+}
+
 function isUrl(s: string) {
-  return typeof s === "string" && /^https?:\/\//i.test(s.trim());
+  const v = normalizeUrl(s);
+  return /^https?:\/\//i.test(v);
 }
 
 type SortBy = "conference" | "school";
@@ -69,10 +115,7 @@ export default function Results(props: Props) {
   const [sortBy, setSortBy] = useState<SortBy>("conference");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const tabRows = useMemo(
-    () => (rows || []).filter((r: AnyRow) => rowTab(r) === tab),
-    [rows, tab]
-  );
+  const tabRows = useMemo(() => (rows || []).filter((r) => rowTab(r) === tab), [rows, tab]);
 
   const conferences = useMemo(() => {
     const set = new Set<string>();
@@ -80,7 +123,7 @@ export default function Results(props: Props) {
       const c = String(conference(r) || "").trim();
       if (c) set.add(c);
     }
-    return Array.from(set).sort((a: string, b: string) => a.localeCompare(b));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [tabRows]);
 
   const filtered = useMemo(() => {
@@ -89,19 +132,18 @@ export default function Results(props: Props) {
 
     let list = tabRows;
 
-    if (conf !== "all") list = list.filter((r: AnyRow) => conference(r) === conf);
+    if (conf !== "all") list = list.filter((r) => conference(r) === conf);
 
     if (q) {
-      list = list.filter((r: AnyRow) => {
-        const s = school(r).toLowerCase();
-        const c = conference(r).toLowerCase();
-        return s.includes(q) || c.includes(q);
-      });
+      list = list.filter(
+        (r) =>
+          school(r).toLowerCase().includes(q) || conference(r).toLowerCase().includes(q)
+      );
     }
 
     const dir = sortDir === "asc" ? 1 : -1;
 
-    return [...list].sort((a: AnyRow, b: AnyRow) => {
+    return [...list].sort((a, b) => {
       const sa = school(a);
       const sb = school(b);
       const ca = conference(a);
@@ -154,7 +196,7 @@ export default function Results(props: Props) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {tabs.map((t: TabItem) => {
+        {tabs.map((t) => {
           const active = t.id === tab;
           return (
             <button
@@ -192,7 +234,7 @@ export default function Results(props: Props) {
               className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-red-500/40"
             >
               <option value="all">All conferences</option>
-              {conferences.map((c: string) => (
+              {conferences.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
@@ -240,7 +282,10 @@ export default function Results(props: Props) {
                   </button>
                 </th>
                 <th className="px-4 py-3 font-extrabold">
-                  <button onClick={() => onClickHeaderSort("conference")} className="hover:underline">
+                  <button
+                    onClick={() => onClickHeaderSort("conference")}
+                    className="hover:underline"
+                  >
                     Conference
                   </button>
                 </th>
@@ -252,10 +297,10 @@ export default function Results(props: Props) {
             </thead>
 
             <tbody>
-              {filtered.map((r: AnyRow, i: number) => {
-                const w = website(r).trim();
-                const q = questionnaire(r).trim();
-                const st = staff(r).trim();
+              {filtered.map((r, i) => {
+                const w = normalizeUrl(website(r));
+                const q = normalizeUrl(questionnaire(r));
+                const st = normalizeUrl(staff(r));
 
                 const key = favKey(r);
                 const isFav = favorites.has(key);
@@ -330,10 +375,10 @@ export default function Results(props: Props) {
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((r: AnyRow, i: number) => {
-            const w = website(r).trim();
-            const q = questionnaire(r).trim();
-            const st = staff(r).trim();
+          {filtered.map((r, i) => {
+            const w = normalizeUrl(website(r));
+            const q = normalizeUrl(questionnaire(r));
+            const st = normalizeUrl(staff(r));
 
             const key = favKey(r);
             const isFav = favorites.has(key);
@@ -360,48 +405,27 @@ export default function Results(props: Props) {
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {isUrl(w) ? (
-                    <a
-                      href={w}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800"
-                    >
+                    <a href={w} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800">
                       Website
                     </a>
                   ) : (
-                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">
-                      Website
-                    </span>
+                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">Website</span>
                   )}
 
                   {isUrl(q) ? (
-                    <a
-                      href={q}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800"
-                    >
+                    <a href={q} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800">
                       Questionnaire
                     </a>
                   ) : (
-                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">
-                      Questionnaire
-                    </span>
+                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">Questionnaire</span>
                   )}
 
                   {isUrl(st) ? (
-                    <a
-                      href={st}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800"
-                    >
+                    <a href={st} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800">
                       Staff
                     </a>
                   ) : (
-                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">
-                      Staff
-                    </span>
+                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">Staff</span>
                   )}
                 </div>
               </div>
