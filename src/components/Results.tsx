@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-type AnyRow = any;
+type AnyRow = Record<string, any>;
 
 type TabItem = { id: string; label: string };
 
@@ -69,7 +69,10 @@ export default function Results(props: Props) {
   const [sortBy, setSortBy] = useState<SortBy>("conference");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const tabRows = useMemo(() => (rows || []).filter((r) => rowTab(r) === tab), [rows, tab]);
+  const tabRows = useMemo(
+    () => (rows || []).filter((r: AnyRow) => rowTab(r) === tab),
+    [rows, tab]
+  );
 
   const conferences = useMemo(() => {
     const set = new Set<string>();
@@ -77,7 +80,7 @@ export default function Results(props: Props) {
       const c = String(conference(r) || "").trim();
       if (c) set.add(c);
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    return Array.from(set).sort((a: string, b: string) => a.localeCompare(b));
   }, [tabRows]);
 
   const filtered = useMemo(() => {
@@ -86,15 +89,19 @@ export default function Results(props: Props) {
 
     let list = tabRows;
 
-    if (conf !== "all") list = list.filter((r) => conference(r) === conf);
+    if (conf !== "all") list = list.filter((r: AnyRow) => conference(r) === conf);
 
     if (q) {
-      list = list.filter((r) => school(r).toLowerCase().includes(q) || conference(r).toLowerCase().includes(q));
+      list = list.filter((r: AnyRow) => {
+        const s = school(r).toLowerCase();
+        const c = conference(r).toLowerCase();
+        return s.includes(q) || c.includes(q);
+      });
     }
 
     const dir = sortDir === "asc" ? 1 : -1;
 
-    return [...list].sort((a, b) => {
+    return [...list].sort((a: AnyRow, b: AnyRow) => {
       const sa = school(a);
       const sb = school(b);
       const ca = conference(a);
@@ -147,7 +154,7 @@ export default function Results(props: Props) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {tabs.map((t) => {
+        {tabs.map((t: TabItem) => {
           const active = t.id === tab;
           return (
             <button
@@ -185,7 +192,7 @@ export default function Results(props: Props) {
               className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-red-500/40"
             >
               <option value="all">All conferences</option>
-              {conferences.map((c) => (
+              {conferences.map((c: string) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
@@ -245,7 +252,7 @@ export default function Results(props: Props) {
             </thead>
 
             <tbody>
-              {filtered.map((r, i) => {
+              {filtered.map((r: AnyRow, i: number) => {
                 const w = website(r).trim();
                 const q = questionnaire(r).trim();
                 const st = staff(r).trim();
@@ -260,7 +267,12 @@ export default function Results(props: Props) {
 
                     <td className="px-4 py-3 text-center">
                       {isUrl(w) ? (
-                        <a href={w} target="_blank" rel="noreferrer" className="text-red-700 font-semibold hover:underline">
+                        <a
+                          href={w}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-red-700 font-semibold hover:underline"
+                        >
                           Open
                         </a>
                       ) : (
@@ -270,7 +282,12 @@ export default function Results(props: Props) {
 
                     <td className="px-4 py-3 text-center">
                       {isUrl(q) ? (
-                        <a href={q} target="_blank" rel="noreferrer" className="text-red-700 font-semibold hover:underline">
+                        <a
+                          href={q}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-red-700 font-semibold hover:underline"
+                        >
                           Open
                         </a>
                       ) : (
@@ -280,7 +297,12 @@ export default function Results(props: Props) {
 
                     <td className="px-4 py-3 text-center">
                       {isUrl(st) ? (
-                        <a href={st} target="_blank" rel="noreferrer" className="text-red-700 font-semibold hover:underline">
+                        <a
+                          href={st}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-red-700 font-semibold hover:underline"
+                        >
                           Open
                         </a>
                       ) : (
@@ -308,7 +330,7 @@ export default function Results(props: Props) {
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((r, i) => {
+          {filtered.map((r: AnyRow, i: number) => {
             const w = website(r).trim();
             const q = questionnaire(r).trim();
             const st = staff(r).trim();
@@ -338,27 +360,48 @@ export default function Results(props: Props) {
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {isUrl(w) ? (
-                    <a href={w} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800">
+                    <a
+                      href={w}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800"
+                    >
                       Website
                     </a>
                   ) : (
-                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">Website</span>
+                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">
+                      Website
+                    </span>
                   )}
 
                   {isUrl(q) ? (
-                    <a href={q} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800">
+                    <a
+                      href={q}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800"
+                    >
                       Questionnaire
                     </a>
                   ) : (
-                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">Questionnaire</span>
+                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">
+                      Questionnaire
+                    </span>
                   )}
 
                   {isUrl(st) ? (
-                    <a href={st} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800">
+                    <a
+                      href={st}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800"
+                    >
                       Staff
                     </a>
                   ) : (
-                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">Staff</span>
+                    <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold">
+                      Staff
+                    </span>
                   )}
                 </div>
               </div>

@@ -1,23 +1,4 @@
-export type CoachRow = {
-  conference: string;
-  school: string;
-
-  // Friendly names used by upgraded UI
-  website?: string;
-  questionnaire?: string;
-  staff?: string;
-
-  // Original names kept for compatibility
-  schoolWebsite?: string;
-  recruitingQuestionnaire?: string;
-  staffDirectory?: string;
-
-  // Optional future fields
-  headCoach?: string;
-  email?: string;
-  phone?: string;
-};
-
+// FILE: src/lib/types.ts
 export type TabKey =
   | "FBS"
   | "FCS"
@@ -29,3 +10,26 @@ export type TabKey =
   | "Post-Graduate"
   | "Canada"
   | "Womens Flag";
+
+export type SortKey = "conference" | "school";
+export type SortDir = "asc" | "desc";
+
+export type CoachRow = {
+  tab?: string;
+
+  school?: string;
+  name?: string;
+
+  conference?: string;
+
+  website?: string;
+  schoolWebsite?: string;
+
+  questionnaire?: string;
+  recruitingQuestionnaire?: string;
+
+  staff?: string;
+  staffDirectory?: string;
+
+  [key: string]: unknown;
+};

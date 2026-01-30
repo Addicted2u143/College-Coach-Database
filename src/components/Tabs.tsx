@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import Results from "./components/Results";
-import { loadCoachRows } from "./lib/csv";
-import { loadFavorites, saveFavorites } from "./lib/storage";
-import { DEFAULT_TAB, TABS } from "./config/tabs";
+import Results from "./Results";
 
-type AnyRow = any;
+// If your file is src/lib/csv.ts, change this line to:
+// import { loadCoachRows } from "../lib/csv";
+import { loadCoachRows } from "../lib/csv";
+
+import { loadFavorites, saveFavorites } from "../lib/storage";
+import { DEFAULT_TAB, TABS } from "../config/tabs";
+
+type AnyRow = Record<string, any>;
 
 function getTabFromUrl(): string {
   const url = new URL(window.location.href);
@@ -17,63 +21,66 @@ function setTabInUrl(tab: string) {
   window.history.replaceState({}, "", url.toString());
 }
 
-function favKey(row: AnyRow) {
-  const tab = String(row?.tab ?? "");
-  const school = String(row?.school ?? row?.School ?? row?.name ?? "");
-  return `${tab}__${school}`.toLowerCase();
+function getField(row: AnyRow, key: string) {
+  return row?.[key] ?? row?.[key[0].toUpperCase() + key.slice(1)];
 }
 
-export default function App() {
-  const [tab, setTab] = useState<string>(getTabFromUrl());
-  const [view, setView] = useState<"cards" | "table">("cards");
+function school(row: AnyRow) {
+  return String(getField(row, "school") ?? getField(row, "name") ?? "");
+}
+
+function favKey(row: AnyRow) {
+  const t = String(getField(row, "tab") ?? "");
+  return `${t}__${school(row)}`.toLowerCase();
+}
+
+export default function Tabs() {
+  const tabs = useMemo(() => TABS.map((t) => ({ id: t.key, label: t.label })), []);
+
+  const [tab, setTab] = useState<string>(() => getTabFromUrl());
+  const [view, setView] = useState<"cards" | "table">("table");
 
   const [rows, setRows] = useState<AnyRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites());
 
   useEffect(() => {
+    // keep URL synced on first load too
     setTabInUrl(tab);
-  }, [tab]);
-
-  useEffect(() => {
-    saveFavorites(favorites);
-  }, [favorites]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      try {
-        setLoading(true);
-        setErr(null);
-
-        const batches = await Promise.all(
-          TABS.map(async (t) => {
-            if (!t.csvUrl.trim()) return [];
-            const list = await loadCoachRows(t.csvUrl);
-            return list.map((r) => ({ ...r, tab: t.key }));
-          })
-        );
-
-        if (!mounted) return;
-        setRows(batches.flat());
-      } catch (e: any) {
-        if (!mounted) return;
-        setErr(e?.message || "Failed to load data.");
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
-  const tabs = useMemo(() => TABS.map((t) => ({ id: t.key, label: t.label })), []);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      try {
+        const tabDef = TABS.find((t) => t.key === tab) ?? TABS[0];
+        const data = await loadCoachRows(tabDef.csvUrl);
+
+        // Attach tab to each row so Results can filter correctly
+        const withTab = (data as AnyRow[]).map((r: AnyRow) => ({ ...r, tab: tabDef.key }));
+
+        if (!cancelled) setRows(withTab);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setRows([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
+
+  const onTabChange = (next: string) => {
+    setTab(next);
+    setTabInUrl(next);
+  };
 
   const onToggleFavorite = (row: AnyRow) => {
     const key = favKey(row);
@@ -81,44 +88,22 @@ export default function App() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      saveFavorites(next);
       return next;
     });
   };
 
   return (
-    <div className="min-h-screen bg-brand-light text-brand-gray">
-      <header className="px-4 pt-8 pb-6">
-        <div className="mx-auto max-w-6xl flex flex-col items-center">
-          <img src="/logo-black.png" alt="My Recruits" className="h-20 w-auto md:h-24" />
-          <h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight text-brand-black">
-            College Coach Directory
-          </h1>
-          <div className="mt-6 h-1 w-full rounded bg-brand-red/90" />
-        </div>
-      </header>
-
-      <main className="px-4 pb-10">
-        <div className="mx-auto max-w-6xl">
-          {err ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-900">
-              <div className="font-bold">Error</div>
-              <div className="mt-1 text-sm">{err}</div>
-            </div>
-          ) : (
-            <Results
-              tabs={tabs}
-              tab={tab}
-              onTabChange={setTab}
-              view={view}
-              onViewChange={setView}
-              rows={rows}
-              loading={loading}
-              favorites={favorites}
-              onToggleFavorite={onToggleFavorite}
-            />
-          )}
-        </div>
-      </main>
-    </div>
+    <Results
+      tabs={tabs}
+      tab={tab}
+      onTabChange={onTabChange}
+      view={view}
+      onViewChange={setView}
+      rows={rows}
+      loading={loading}
+      favorites={favorites}
+      onToggleFavorite={onToggleFavorite}
+    />
   );
 }
