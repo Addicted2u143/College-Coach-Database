@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 type AnyRow = any;
+
 type TabItem = { id: string; label: string };
 
 type Props = {
@@ -18,68 +19,112 @@ type Props = {
   onToggleFavorite: (row: AnyRow) => void;
 };
 
-// normalize keys: "School Website" -> "schoolwebsite"
-function normKey(s: string) {
-  return String(s || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+function toStr(v: unknown) {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
 }
 
-function getField(row: AnyRow, keys: string | string[]) {
-  if (!row) return undefined;
-  const list = Array.isArray(keys) ? keys : [keys];
+/**
+ * Robust field getter:
+ * - tries exact keys
+ * - tries trimmed/case-insensitive match against row headers
+ */
+function getField(row: AnyRow, keys: string[]) {
+  if (!row) return "";
 
-  // Fast path: direct access + TitleCase variant
-  for (const k of list) {
-    if (k in row) return row[k];
-    const title = k ? k[0].toUpperCase() + k.slice(1) : k;
-    if (title in row) return row[title];
+  // fast path: exact keys + "Capitalized"
+  for (const k of keys) {
+    if (k in row) return toStr(row[k]);
+    const cap = k ? k[0].toUpperCase() + k.slice(1) : k;
+    if (cap in row) return toStr(row[cap]);
   }
 
-  // Robust path: case/space-insensitive match
-  const map = new Map<string, any>();
-  for (const rk of Object.keys(row)) map.set(normKey(rk), row[rk]);
-
-  for (const k of list) {
-    const hit = map.get(normKey(k));
-    if (hit !== undefined) return hit;
+  // case-insensitive header match (handles "Conference ", "CONF", etc.)
+  const map = new Map<string, string>();
+  for (const actual of Object.keys(row)) {
+    map.set(actual.trim().toLowerCase(), actual);
   }
 
-  return undefined;
+  for (const k of keys) {
+    const actual = map.get(k.trim().toLowerCase());
+    if (actual) return toStr(row[actual]);
+  }
+
+  return "";
 }
 
 function rowTab(row: AnyRow) {
-  return String(getField(row, ["tab", "division", "sheet", "group"]) ?? "");
+  return toStr(getField(row, ["tab", "Tab", "TAB"]));
 }
 
 function school(row: AnyRow) {
-  return String(getField(row, ["school", "name", "program", "college"]) ?? "");
+  return toStr(
+    getField(row, [
+      "school",
+      "School",
+      "name",
+      "Name",
+      "school name",
+      "School Name",
+    ])
+  );
 }
 
 function conference(row: AnyRow) {
-  return String(getField(row, ["conference", "conf"]) ?? "");
-}
-
-function website(row: AnyRow) {
-  return String(
-    getField(row, ["website", "schoolWebsite", "school website", "school url", "url"]) ?? ""
+  return toStr(
+    getField(row, [
+      "conference",
+      "Conference",
+      "conf",
+      "Conf",
+      "conference name",
+      "Conference Name",
+      "league",
+      "League",
+      "division",
+      "Division",
+    ])
   );
 }
 
-function questionnaire(row: AnyRow) {
-  return String(
+function websiteRaw(row: AnyRow) {
+  return toStr(
+    getField(row, [
+      "website",
+      "Website",
+      "schoolWebsite",
+      "SchoolWebsite",
+      "school website",
+      "School Website",
+      "site",
+      "Site",
+    ])
+  );
+}
+
+function questionnaireRaw(row: AnyRow) {
+  return toStr(
     getField(row, [
       "questionnaire",
+      "Questionnaire",
       "recruitingQuestionnaire",
+      "RecruitingQuestionnaire",
       "recruiting questionnaire",
-      "questionnaire link",
-    ]) ?? ""
+      "Recruiting Questionnaire",
+    ])
   );
 }
 
-function staff(row: AnyRow) {
-  return String(
-    getField(row, ["staff", "staffDirectory", "staff directory", "staff link"]) ?? ""
+function staffRaw(row: AnyRow) {
+  return toStr(
+    getField(row, [
+      "staff",
+      "Staff",
+      "staffDirectory",
+      "StaffDirectory",
+      "staff directory",
+      "Staff Directory",
+    ])
   );
 }
 
@@ -91,14 +136,17 @@ function normalizeUrl(s: string) {
   const v = (s || "").trim();
   if (!v) return "";
   if (/^https?:\/\//i.test(v)) return v;
-  // If sheet has "www.school.edu" without https, fix it
-  if (/^www\./i.test(v)) return `https://${v}`;
+
+  // accept "www.xxx.com" or "xxx.com/..." and auto-prefix https
+  if (/^[a-z0-9.-]+\.[a-z]{2,}([/].*)?$/i.test(v) || /^www\./i.test(v)) {
+    return `https://${v}`;
+  }
+
   return v;
 }
 
 function isUrl(s: string) {
-  const v = normalizeUrl(s);
-  return /^https?:\/\//i.test(v);
+  return /^https?:\/\//i.test((s || "").trim());
 }
 
 type SortBy = "conference" | "school";
@@ -120,7 +168,7 @@ export default function Results(props: Props) {
   const conferences = useMemo(() => {
     const set = new Set<string>();
     for (const r of tabRows) {
-      const c = String(conference(r) || "").trim();
+      const c = conference(r);
       if (c) set.add(c);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b));
@@ -137,7 +185,8 @@ export default function Results(props: Props) {
     if (q) {
       list = list.filter(
         (r) =>
-          school(r).toLowerCase().includes(q) || conference(r).toLowerCase().includes(q)
+          school(r).toLowerCase().includes(q) ||
+          conference(r).toLowerCase().includes(q)
       );
     }
 
@@ -282,10 +331,7 @@ export default function Results(props: Props) {
                   </button>
                 </th>
                 <th className="px-4 py-3 font-extrabold">
-                  <button
-                    onClick={() => onClickHeaderSort("conference")}
-                    className="hover:underline"
-                  >
+                  <button onClick={() => onClickHeaderSort("conference")} className="hover:underline">
                     Conference
                   </button>
                 </th>
@@ -298,9 +344,9 @@ export default function Results(props: Props) {
 
             <tbody>
               {filtered.map((r, i) => {
-                const w = normalizeUrl(website(r));
-                const q = normalizeUrl(questionnaire(r));
-                const st = normalizeUrl(staff(r));
+                const w = normalizeUrl(websiteRaw(r));
+                const q = normalizeUrl(questionnaireRaw(r));
+                const st = normalizeUrl(staffRaw(r));
 
                 const key = favKey(r);
                 const isFav = favorites.has(key);
@@ -308,16 +354,11 @@ export default function Results(props: Props) {
                 return (
                   <tr key={key || i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                     <td className="px-4 py-3 font-semibold">{school(r)}</td>
-                    <td className="px-4 py-3 text-gray-800">{conference(r)}</td>
+                    <td className="px-4 py-3 text-gray-800">{conference(r) || "—"}</td>
 
                     <td className="px-4 py-3 text-center">
                       {isUrl(w) ? (
-                        <a
-                          href={w}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-red-700 font-semibold hover:underline"
-                        >
+                        <a href={w} target="_blank" rel="noreferrer" className="text-red-700 font-semibold hover:underline">
                           Open
                         </a>
                       ) : (
@@ -327,12 +368,7 @@ export default function Results(props: Props) {
 
                     <td className="px-4 py-3 text-center">
                       {isUrl(q) ? (
-                        <a
-                          href={q}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-red-700 font-semibold hover:underline"
-                        >
+                        <a href={q} target="_blank" rel="noreferrer" className="text-red-700 font-semibold hover:underline">
                           Open
                         </a>
                       ) : (
@@ -342,12 +378,7 @@ export default function Results(props: Props) {
 
                     <td className="px-4 py-3 text-center">
                       {isUrl(st) ? (
-                        <a
-                          href={st}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-red-700 font-semibold hover:underline"
-                        >
+                        <a href={st} target="_blank" rel="noreferrer" className="text-red-700 font-semibold hover:underline">
                           Open
                         </a>
                       ) : (
@@ -376,9 +407,9 @@ export default function Results(props: Props) {
       ) : (
         <div className="space-y-4">
           {filtered.map((r, i) => {
-            const w = normalizeUrl(website(r));
-            const q = normalizeUrl(questionnaire(r));
-            const st = normalizeUrl(staff(r));
+            const w = normalizeUrl(websiteRaw(r));
+            const q = normalizeUrl(questionnaireRaw(r));
+            const st = normalizeUrl(staffRaw(r));
 
             const key = favKey(r);
             const isFav = favorites.has(key);
@@ -388,7 +419,7 @@ export default function Results(props: Props) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-xl font-extrabold text-gray-900">{school(r)}</div>
-                    <div className="mt-1 text-sm text-gray-600">{conference(r)}</div>
+                    <div className="mt-1 text-sm text-gray-600">{conference(r) || "—"}</div>
                   </div>
 
                   <button
