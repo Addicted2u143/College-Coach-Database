@@ -127,9 +127,9 @@ export default function App() {
         <div className="mx-auto max-w-6xl flex flex-col items-center">
           <img src={logoUrl} alt="My Recruits" className="h-20 w-auto md:h-24" />
 
-          <h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight text-black">
-            College Coach Directory
-          </h1>
+         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight text-gray-900">
+           College Database
+        </h1>
 
           <div className="mt-6 h-1 w-full rounded bg-red-600/90" />
         </div>
