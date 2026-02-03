@@ -1,16 +1,4 @@
-// FILE: src/lib/types.ts
-export type CoachRow = {
-  conference: string; // Column A
-  school: string; // Column B
-  schoolWebsite?: string;
-  recruitingQuestionnaire?: string;
-  staffDirectory?: string;
-
-  // Optional future fields (safe to keep now)
-  headCoach?: string;
-  email?: string;
-  phone?: string;
-};
+// src/lib/types.ts
 
 export type TabKey =
   | "FBS"
@@ -26,10 +14,11 @@ export type TabKey =
   | "Mens Basketball"
   | "Mens Baseball";
 
-export type LoadState =
-  | { status: "idle" | "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; rows: CoachRow[] };
+export type TabGroup = "Football" | "Other Sports";
 
-export type SortKey = "conference" | "school";
-export type SortDir = "asc" | "desc";
+export type TabDef = {
+  key: TabKey;
+  label: string;
+  csvUrl: string;
+  group: TabGroup;
+};
