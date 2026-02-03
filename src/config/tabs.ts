@@ -65,29 +65,30 @@ export const TABS: TabDef[] = [
     csvUrl:
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vSC7JeyZJaNuU-jdhjDGgzOvj4-ZLxORZ008FnhdsFgvK5KV93tT1lYfkvCDw4h5g/pub?gid=814992836&single=true&output=csv",
   },
-  {
+ 
+
+  // ---- Other Sports (NEW) ----
+   {
     key: "Womens Flag",
     label: "Womens Flag",
     group: "Football",
     csvUrl:
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vSC7JeyZJaNuU-jdhjDGgzOvj4-ZLxORZ008FnhdsFgvK5KV93tT1lYfkvCDw4h5g/pub?gid=1723697523&single=true&output=csv",
-  },
-
-  // ---- Other Sports (NEW) ----
-  {
+   },
+   {
     key: "Mens Basketball",
     label: "Men’s Basketball",
     group: "Other Sports",
     csvUrl:
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vSC7JeyZJaNuU-jdhjDGgzOvj4-ZLxORZ008FnhdsFgvK5KV93tT1lYfkvCDw4h5g/pub?gid=1547947146&single=true&output=csv",
-  },
-  {
+   },
+   {
     key: "Mens Baseball",
     label: "Men’s Baseball",
     group: "Other Sports",
     csvUrl:
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vSC7JeyZJaNuU-jdhjDGgzOvj4-ZLxORZ008FnhdsFgvK5KV93tT1lYfkvCDw4h5g/pub?gid=1455310286&single=true&output=csv",
-  },
+   },
 ];
 
 export const DEFAULT_TAB: TabKey = "FBS";
