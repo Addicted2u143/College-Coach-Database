@@ -1,115 +1,86 @@
 // src/App.tsx
 import { useEffect, useMemo, useState } from "react";
 import Results from "./components/Results";
-
-import { loadCoachRows } from "./lib/csv";
-import { loadFavorites, saveFavorites } from "./lib/storage";
-import { DEFAULT_TAB, TABS } from "./config/tabs";
+import { TABS, DEFAULT_TAB } from "./config/tabs";
 
 type AnyRow = any;
 
-function getTabFromUrl() {
-  const url = new URL(window.location.href);
-  const tab = url.searchParams.get("tab");
-  return tab || (DEFAULT_TAB as any) || "FBS";
+function getTabFromUrl(allowed: Set<string>) {
+  const u = new URL(window.location.href);
+  const raw = u.searchParams.get("tab");
+  if (!raw) return DEFAULT_TAB;
+  return allowed.has(raw) ? (raw as any) : DEFAULT_TAB;
 }
 
 function setTabInUrl(tab: string) {
-  const url = new URL(window.location.href);
-  url.searchParams.set("tab", tab);
-  window.history.replaceState({}, "", url.toString());
-}
-
-// Favorite key: stable string per row
-function favKey(row: AnyRow) {
-  const tab = row?.tab ?? row?.division ?? row?.sheet ?? row?.group ?? "";
-  const school = row?.school ?? row?.School ?? row?.name ?? "";
-  return `${tab}__${school}`.toLowerCase();
+  const u = new URL(window.location.href);
+  u.searchParams.set("tab", tab);
+  window.history.replaceState({}, "", u.toString());
 }
 
 export default function App() {
-  const [tab, setTab] = useState<string>(getTabFromUrl());
-  const [view, setView] = useState<"cards" | "table">("cards");
+  const allowedTabs = useMemo(() => new Set(TABS.map((t) => t.key)), []);
+  const [tab, setTab] = useState<string>(() => getTabFromUrl(allowedTabs));
 
-  const [allRows, setAllRows] = useState<AnyRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const [rows, setRows] = useState<AnyRow[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
-
-  // Load data
+  // Keep URL -> state in sync (back/forward)
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    const onPop = () => setTab(getTabFromUrl(allowedTabs));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [allowedTabs]);
+
+  // Load ALL tabs (so switching tabs is instant)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
       try {
-        setLoading(true);
-        setErr(null);
-        // find CSV URL for current tab
-        const tabDef =
-          ((TABS as any[]) || []).find((t) =>
-            [t.id, t.key, t.value, t.name, t.label].some((x: any) => String(x) === String(tab))
-          ) || ((TABS as any[])[0] as any) || null;
-        const csvUrl = tabDef?.csvUrl ?? tabDef?.csv ?? tabDef?.url ?? "";
-        let rows: AnyRow[] = [];
-        if (csvUrl) {
-          rows = await loadCoachRows(csvUrl, tab);
-        } else {
-          rows = [];
-        }
-        if (!mounted) return;
-        setAllRows(Array.isArray(rows) ? rows : []);
-      } catch (e: any) {
-        if (!mounted) return;
-        setErr(e?.message || "Failed to load data.");
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [tab]);
+        const allRows: AnyRow[] = [];
 
-  // Load favorites
-  useEffect(() => {
-    try {
-      const saved = loadFavorites?.();
-      if (saved instanceof Set) setFavorites(saved);
-      else if (Array.isArray(saved)) setFavorites(new Set(saved));
-    } catch {
-      // ignore
+        for (const t of TABS) {
+          const res = await fetch(t.csvUrl, { cache: "no-store" });
+          const text = await res.text();
+
+          // super-light CSV parse (assumes your published CSV is normal)
+          const lines = text.replace(/\r/g, "").split("\n").filter(Boolean);
+          const headers = (lines.shift() || "")
+            .split(",")
+            .map((h) => h.trim());
+
+          for (const line of lines) {
+            const cols = line.split(",");
+            const obj: Record<string, string> = { tab: t.key };
+            for (let i = 0; i < headers.length; i++) obj[headers[i]] = cols[i] ?? "";
+            allRows.push(obj);
+          }
+        }
+
+        if (!cancelled) setRows(allRows);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Persist favorites
-  useEffect(() => {
-    try {
-      saveFavorites?.(favorites);
-    } catch {
-      // ignore
-    }
-  }, [favorites]);
+  const onTabChange = (next: string) => {
+    setTab(next);
+    setTabInUrl(next);
+  };
 
-  // Sync tab with URL
-  useEffect(() => {
-    setTabInUrl(tab);
-  }, [tab]);
-
-  // Tabs list
-  const tabs = useMemo(() => {
-    const raw = (TABS as any[]) || [];
-    const normalized = raw.map((t) => {
-      if (typeof t === "string") return { id: t, label: t };
-      const id = t.id ?? t.key ?? t.value ?? t.name ?? t.label;
-      const label = t.label ?? t.name ?? t.id ?? t.key ?? String(id);
-      return { id: String(id), label: String(label) };
-    });
-    return normalized.length ? normalized : [{ id: tab, label: tab }];
-  }, [tab]);
+  const [view, setView] = useState<"cards" | "table">("cards");
+  const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
 
   const onToggleFavorite = (row: AnyRow) => {
-    const key = favKey(row);
+    const key = `${String(row.tab || "")}__${String(row.School || row.school || row.Name || row.name || "")}`.toLowerCase();
     setFavorites((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -118,45 +89,21 @@ export default function App() {
     });
   };
 
-  // ✅ This fixes the logo on GitHub Pages / subpaths
-  const logoUrl = `${import.meta.env.BASE_URL}logo-black.png`;
-
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
-      <header className="px-4 pt-8 pb-6">
-        <div className="mx-auto max-w-6xl flex flex-col items-center">
-          <img src={logoUrl} alt="My Recruits" className="h-20 w-auto md:h-24" />
-
-         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight text-gray-900">
-           College Database
-        </h1>
-
-          <div className="mt-6 h-1 w-full rounded bg-red-600/90" />
-        </div>
-      </header>
-
-      <main className="px-4 pb-10">
-        <div className="mx-auto max-w-6xl">
-          {err ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-              <div className="font-bold">Error</div>
-              <div className="mt-1 text-sm">{err}</div>
-            </div>
-          ) : (
-            <Results
-              tabs={tabs}
-              tab={tab}
-              onTabChange={setTab}
-              view={view}
-              onViewChange={setView}
-              rows={allRows}
-              loading={loading}
-              favorites={favorites}
-              onToggleFavorite={onToggleFavorite}
-            />
-          )}
-        </div>
-      </main>
+    <div className="min-h-screen bg-gray-50">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6">
+        <Results
+          tabs={TABS.map((t) => ({ id: t.key, label: t.label, group: t.group }))}
+          tab={tab}
+          onTabChange={onTabChange}
+          view={view}
+          onViewChange={setView}
+          rows={rows}
+          loading={loading}
+          favorites={favorites}
+          onToggleFavorite={onToggleFavorite}
+        />
+      </div>
     </div>
   );
 }
