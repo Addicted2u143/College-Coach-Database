@@ -1,9 +1,10 @@
 // src/lib/types.ts
 
-// NOTE:
-// We keep TabKey flexible (string) so your tab keys can include spaces/hyphens
-// like "Womens Flag" or "Post-Graduate" without TypeScript breaking.
+// =============================
+// TAB / NAV TYPES
+// =============================
 
+// Keep TabKey flexible so keys like "Post-Graduate" or "Womens Flag" work
 export type TabKey = string;
 
 export type TabDef = {
@@ -13,6 +14,39 @@ export type TabDef = {
   group?: string;
 };
 
-// Sorting helpers (used by src/lib/sort.ts)
+// =============================
+// DATA ROW TYPE
+// =============================
+
+// Generic row shape for CSV-loaded coach data
+export type CoachRow = {
+  tab?: string;
+  division?: string;
+  sheet?: string;
+  group?: string;
+
+  school?: string;
+  School?: string;
+  name?: string;
+
+  conference?: string;
+  Conference?: string;
+
+  website?: string;
+  Website?: string;
+
+  questionnaire?: string;
+  Questionnaire?: string;
+
+  staff?: string;
+  Staff?: string;
+
+  [key: string]: any;
+};
+
+// =============================
+// SORTING TYPES (used by sort.ts)
+// =============================
+
 export type SortKey = "school" | "conference";
 export type SortDir = "asc" | "desc";
