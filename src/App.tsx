@@ -2,108 +2,111 @@
 import { useEffect, useMemo, useState } from "react";
 import Results from "./components/Results";
 import { TABS, DEFAULT_TAB } from "./config/tabs";
+import { loadCsv } from "./lib/csv";
+import type { TabKey } from "./lib/types";
 
 type AnyRow = any;
 
-function getTabFromUrl(allowed: Set<string>) {
-  const u = new URL(window.location.href);
-  const raw = u.searchParams.get("tab");
-  if (!raw) return DEFAULT_TAB;
-  return allowed.has(raw) ? (raw as any) : DEFAULT_TAB;
-}
-
-function setTabInUrl(tab: string) {
-  const u = new URL(window.location.href);
-  u.searchParams.set("tab", tab);
-  window.history.replaceState({}, "", u.toString());
-}
-
 export default function App() {
-  const allowedTabs = useMemo(() => new Set(TABS.map((t) => t.key)), []);
-  const [tab, setTab] = useState<string>(() => getTabFromUrl(allowedTabs));
-
+  const [tab, setTab] = useState<TabKey>(DEFAULT_TAB);
   const [rows, setRows] = useState<AnyRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Keep URL -> state in sync (back/forward)
-  useEffect(() => {
-    const onPop = () => setTab(getTabFromUrl(allowedTabs));
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, [allowedTabs]);
+  const [view, setView] = useState<"cards" | "table">("cards");
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  // Load ALL tabs (so switching tabs is instant)
+  const activeTab = useMemo(() => TABS.find((t) => t.key === tab), [tab]);
+
+  // Load CSV whenever tab changes
   useEffect(() => {
+    if (!activeTab) return;
+
     let cancelled = false;
+    setLoading(true);
+    setError(null);
 
-    async function run() {
-      setLoading(true);
-      try {
-        const allRows: AnyRow[] = [];
+    loadCsv(activeTab.csvUrl)
+      .then((data: AnyRow[]) => {
+        if (cancelled) return;
 
-        for (const t of TABS) {
-          const res = await fetch(t.csvUrl, { cache: "no-store" });
-          const text = await res.text();
+        const list = Array.isArray(data) ? data : [];
+        setRows(list.map((r) => ({ ...r, tab: activeTab.key })));
 
-          // super-light CSV parse (assumes your published CSV is normal)
-          const lines = text.replace(/\r/g, "").split("\n").filter(Boolean);
-          const headers = (lines.shift() || "")
-            .split(",")
-            .map((h) => h.trim());
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        console.error("CSV load failed:", err);
+        if (cancelled) return;
 
-          for (const line of lines) {
-            const cols = line.split(",");
-            const obj: Record<string, string> = { tab: t.key };
-            for (let i = 0; i < headers.length; i++) obj[headers[i]] = cols[i] ?? "";
-            allRows.push(obj);
-          }
-        }
+        setRows([]);
+        setError(
+          `Failed to load ${activeTab.label}. ` +
+            (err instanceof Error ? err.message : String(err))
+        );
+        setLoading(false);
+      });
 
-        if (!cancelled) setRows(allRows);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeTab]);
 
-  const onTabChange = (next: string) => {
-    setTab(next);
-    setTabInUrl(next);
-  };
+  function toggleFavorite(row: AnyRow) {
+    const t = String(row?.tab ?? "").trim();
+    const s = String(row?.school ?? row?.School ?? row?.name ?? "").trim();
+    const key = `${t}__${s}`.toLowerCase();
 
-  const [view, setView] = useState<"cards" | "table">("cards");
-  const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
-
-  const onToggleFavorite = (row: AnyRow) => {
-    const key = `${String(row.tab || "")}__${String(row.School || row.school || row.Name || row.name || "")}`.toLowerCase();
     setFavorites((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
     });
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto w-full max-w-6xl px-4 py-6">
+    <div className="min-h-screen bg-gray-100">
+      {/* HEADER */}
+      <header className="bg-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-8 text-center">
+          <img
+            src="/logo-black.png"
+            alt="My Recruits"
+            className="h-16 mx-auto mb-3"
+          />
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900">
+            College Database
+          </h1>
+          <div className="mt-4 h-1 w-full bg-red-700 rounded-full" />
+        </div>
+      </header>
+
+      {/* MAIN */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Error banner (only shows when CSV fails) */}
+        {error ? (
+          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-800 font-semibold">
+            {error}
+          </div>
+        ) : null}
+
         <Results
-          tabs={TABS.map((t) => ({ id: t.key, label: t.label, group: t.group }))}
+          tabs={TABS.map((t) => ({
+            id: t.key,
+            label: t.label,
+            group: t.group,
+          }))}
           tab={tab}
-          onTabChange={onTabChange}
+          onTabChange={(t) => setTab(t as TabKey)}
           view={view}
           onViewChange={setView}
           rows={rows}
           loading={loading}
           favorites={favorites}
-          onToggleFavorite={onToggleFavorite}
+          onToggleFavorite={toggleFavorite}
         />
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,109 +1,52 @@
-import { useEffect, useMemo, useState } from "react";
-import Results from "./Results";
+// src/components/Tabs.tsx
+import { useMemo } from "react";
+import type { TabDef, TabKey } from "../lib/types";
 
-// If your file is src/lib/csv.ts, change this line to:
-// import { loadCoachRows } from "../lib/csv";
-import { loadCoachRows } from "../lib/csv";
+type Props = {
+  tabs: TabDef[];
+  tab: TabKey;
+  onTabChange: (tab: TabKey) => void;
+};
 
-import { loadFavorites, saveFavorites } from "../lib/storage";
-import { DEFAULT_TAB, TABS } from "../config/tabs";
-
-type AnyRow = Record<string, any>;
-
-function getTabFromUrl(): string {
-  const url = new URL(window.location.href);
-  return url.searchParams.get("tab") || DEFAULT_TAB || "FBS";
-}
-
-function setTabInUrl(tab: string) {
-  const url = new URL(window.location.href);
-  url.searchParams.set("tab", tab);
-  window.history.replaceState({}, "", url.toString());
-}
-
-function getField(row: AnyRow, key: string) {
-  return row?.[key] ?? row?.[key[0].toUpperCase() + key.slice(1)];
-}
-
-function school(row: AnyRow) {
-  return String(getField(row, "school") ?? getField(row, "name") ?? "");
-}
-
-function favKey(row: AnyRow) {
-  const t = String(getField(row, "tab") ?? "");
-  return `${t}__${school(row)}`.toLowerCase();
-}
-
-export default function Tabs() {
-  const tabs = useMemo(() => TABS.map((t) => ({ id: t.key, label: t.label })), []);
-
-  const [tab, setTab] = useState<string>(() => getTabFromUrl());
-  const [view, setView] = useState<"cards" | "table">("table");
-
-  const [rows, setRows] = useState<AnyRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites());
-
-  useEffect(() => {
-    // keep URL synced on first load too
-    setTabInUrl(tab);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      setLoading(true);
-      try {
-        const tabDef = TABS.find((t) => t.key === tab) ?? TABS[0];
-        const data = await loadCoachRows(tabDef.csvUrl);
-
-        // Attach tab to each row so Results can filter correctly
-        const withTab = (data as AnyRow[]).map((r: AnyRow) => ({ ...r, tab: tabDef.key }));
-
-        if (!cancelled) setRows(withTab);
-      } catch (e) {
-        console.error(e);
-        if (!cancelled) setRows([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+export default function Tabs({ tabs, tab, onTabChange }: Props) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, TabDef[]>();
+    for (const t of tabs) {
+      const g = t.group || "Other";
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(t);
     }
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [tab]);
-
-  const onTabChange = (next: string) => {
-    setTab(next);
-    setTabInUrl(next);
-  };
-
-  const onToggleFavorite = (row: AnyRow) => {
-    const key = favKey(row);
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      saveFavorites(next);
-      return next;
-    });
-  };
+    return Array.from(map.entries());
+  }, [tabs]);
 
   return (
-    <Results
-      tabs={tabs}
-      tab={tab}
-      onTabChange={onTabChange}
-      view={view}
-      onViewChange={setView}
-      rows={rows}
-      loading={loading}
-      favorites={favorites}
-      onToggleFavorite={onToggleFavorite}
-    />
+    <div className="space-y-3">
+      {grouped.map(([groupName, groupTabs]) => (
+        <div key={groupName} className="space-y-2">
+          <div className="text-xs font-extrabold tracking-wider text-gray-500 uppercase">
+            {groupName}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {groupTabs.map((t) => {
+              const active = t.key === tab;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => onTabChange(t.key)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition ${
+                    active
+                      ? "bg-gray-900 text-white border-gray-900 shadow-sm"
+                      : "bg-white text-gray-800 border-gray-300 hover:border-gray-500"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

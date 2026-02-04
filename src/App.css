@@ -1,146 +1,21 @@
-/* FILE: src/App.css */
+/* src/App.css */
 
+/* Accent (matches Tailwind red-600) */
 :root {
-  --bg: #f4f4f4;
-  --panel: #ffffff;
-  --text: #0b0b0b; /* true black-ish */
-  --muted: #555;
-  --line: #d8d8d8;
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --red: #b30016;
-  --pill: #ececec;
-  --pillActive: #1a1a1a;
-  --pillActiveText: #fff;
+  --mr-accent: #dc2626;
 }
 
-.page {
-  min-height: 100vh;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.topHeader {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 28px 18px 12px;
-  position: relative;
-}
-
-.brand {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-}
-
-.brandLogo {
-  max-width: 520px;
-  width: min(520px, 70vw);
-  height: auto;
-  display: block;
-}
-
-.brandTitle {
-  font-weight: 800;
-  color: #000; /* force black */
-  font-size: clamp(24px, 3.2vw, 44px); /* bigger + responsive */
-  letter-spacing: 0.2px;
-}
-
-.topRight {
-  position: absolute;
-  right: 18px;
-  top: 18px;
-}
-
-.redRule {
-  height: 3px;
-  background: var(--red);
-  margin: 0 0 16px;
-}
-
-.shell {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 14px 40px;
-}
-
-.panelHeader {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-  padding: 16px 18px;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.panelTitle {
-  font-size: clamp(22px, 2.6vw, 34px);
-  font-weight: 900;
-}
-
-.panelMeta {
-  color: var(--muted);
-  font-size: 13px;
-  text-align: right;
-}
-
-/* Universal link/button look (this fixes “links disappeared”) */
-a {
-  color: inherit;
+/* Make ALL links in the results area red like “before” */
+.results a {
+  color: var(--mr-accent);
+  font-weight: 700;
   text-decoration: none;
 }
-
-.linkBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: #fff;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-  font-weight: 700;
-  color: #111;
-  min-width: 86px;
+.results a:hover {
+  text-decoration: underline;
 }
 
-.linkBtn:hover {
-  border-color: #bdbdbd;
-  transform: translateY(-1px);
-}
-
-.linkBtn.disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-
-/* Table alignment helpers */
-.centerCol {
-  text-align: center;
-}
-
-.centerCol * {
-  justify-content: center;
-}
-
-/* Responsive: move toggle nicely on small screens */
-@media (max-width: 680px) {
-  .topRight {
-    position: static;
-    margin-top: 10px;
-  }
-  .topHeader {
-    flex-direction: column;
-  }
-  .panelHeader {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .panelMeta {
-    text-align: left;
-  }
+/* If you have pill buttons or “Open” looking like plain text, keep it consistent */
+.results a:visited {
+  color: var(--mr-accent);
 }
