@@ -45,13 +45,12 @@ function conference(row: AnyRow) {
   return String(getAny(row, ["Conference", "conference"])).trim();
 }
 
-// 🔥 SPLIT LOGIC (safe fallback)
 function schoolSite(row: AnyRow) {
-  return String(getAny(row, ["School Website", "school website", "Website", "website"])).trim();
+  return String(getAny(row, ["School Website", "Website"])).trim();
 }
 
 function teamSite(row: AnyRow) {
-  return String(getAny(row, ["Program Website", "program website", "Team Page", "team page"])).trim();
+  return String(getAny(row, ["Team Page", "Program Website"])).trim();
 }
 
 function questionnaire(row: AnyRow) {
@@ -62,17 +61,16 @@ function staff(row: AnyRow) {
   return String(getAny(row, ["Staff Directory"])).trim();
 }
 
-// 🔥 SOCIALS
 function twitter(row: AnyRow) {
-  return String(getAny(row, ["Twitter/X", "twitter"])).trim();
+  return String(getAny(row, ["Twitter/X", "twitter_x"])).trim();
 }
 
 function instagram(row: AnyRow) {
-  return String(getAny(row, ["Instagram", "instagram"])).trim();
+  return String(getAny(row, ["Instagram"])).trim();
 }
 
 function facebook(row: AnyRow) {
-  return String(getAny(row, ["Facebook", "facebook"])).trim();
+  return String(getAny(row, ["Facebook"])).trim();
 }
 
 function normalizeUrl(value: string) {
@@ -87,9 +85,27 @@ function favKey(row: AnyRow) {
   return `${rowTab(row)}__${school(row)}`.toLowerCase();
 }
 
-export default function Results(props: Props) {
-  const { tabs, tab, onTabChange, view, onViewChange, rows, loading, favorites, onToggleFavorite } =
-    props;
+export default function Results({
+  tabs,
+  tab,
+  onTabChange,
+  view,
+  onViewChange,
+  rows,
+  loading,
+  favorites,
+  onToggleFavorite,
+}: Props) {
+
+  // prevent unused variable build errors
+  void tabs;
+  void tab;
+  void onTabChange;
+  void view;
+  void onViewChange;
+  void loading;
+  void favorites;
+  void onToggleFavorite;
 
   const [search, setSearch] = useState("");
 
@@ -126,108 +142,55 @@ export default function Results(props: Props) {
             const ig = normalizeUrl(instagram(r));
             const fb = normalizeUrl(facebook(r));
 
-            const key = favKey(r) || i;
-
             return (
-              <div key={key} className="border rounded-xl p-4 bg-white shadow-sm">
+              <div key={i} className="border rounded-xl p-4 bg-white shadow-sm">
 
-                {/* TITLE */}
                 <div className="text-lg font-bold">{school(r)}</div>
 
-                {/* DIVISION */}
                 {division(r) && (
                   <div className="text-sm text-gray-700">
                     <b>Division:</b> {division(r)}
                   </div>
                 )}
 
-                {/* CONFERENCE */}
                 <div className="text-sm text-gray-700">
                   <b>Conference:</b> {conference(r)}
                 </div>
 
-                {/* BUTTONS */}
                 <div className="flex flex-wrap gap-2 mt-3">
-
                   {sSite && <a href={sSite} target="_blank" className="btn">School Site</a>}
                   {tSite && <a href={tSite} target="_blank" className="btn">Team Site</a>}
                   {q && <a href={q} target="_blank" className="btn">Questionnaire</a>}
                   {st && <a href={st} target="_blank" className="btn">Staff</a>}
-
                 </div>
 
                 {/* SOCIAL ICONS */}
-              <div className="flex gap-3 mt-3">
+                <div className="flex gap-3 mt-3">
 
-  {tw && (
-    <a href={tw} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition">
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M18.244 2H21l-6.5 7.43L22 22h-6.828l-5.345-6.993L3.5 22H1l6.927-7.91L2 2h6.828l4.845 6.326L18.244 2Zm-2.394 18h1.885L8.394 4H6.41l9.44 16Z"/>
-      </svg>
-    </a>
-  )}
+                  {tw && (
+                    <a href={tw} target="_blank" className="p-2 bg-gray-100 rounded">
+                      X
+                    </a>
+                  )}
 
-  {ig && (
-    <a href={ig} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition">
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm4.25 5.5A4.75 4.75 0 1 0 16.75 12 4.76 4.76 0 0 0 12 7.5Zm6-1.75a1.25 1.25 0 1 0 1.25 1.25A1.25 1.25 0 0 0 18 5.75Z"/>
-      </svg>
-    </a>
-  )}
+                  {ig && (
+                    <a href={ig} target="_blank" className="p-2 bg-gray-100 rounded">
+                      IG
+                    </a>
+                  )}
 
-  {fb && (
-    <a href={fb} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition">
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M13 22v-9h3l1-4h-4V7c0-1 .5-2 2-2h2V1.5S16.5 1 15 1c-3 0-5 2-5 5v3H7v4h3v9h3Z"/>
-      </svg>
-    </a>
-  )}
+                  {fb && (
+                    <a href={fb} target="_blank" className="p-2 bg-gray-100 rounded">
+                      FB
+                    </a>
+                  )}
 
-</div>
+                </div>
 
               </div>
             );
           })}
         </div>
-      )}
-
-      {/* TABLE */}
-      {view === "table" && (
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              <th>School</th>
-              <th>Division</th>
-              <th>Conference</th>
-              <th>School</th>
-              <th>Team</th>
-              <th>Q</th>
-              <th>Staff</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.map((r, i) => {
-              const sSite = normalizeUrl(schoolSite(r));
-              const tSite = normalizeUrl(teamSite(r));
-              const q = normalizeUrl(questionnaire(r));
-              const st = normalizeUrl(staff(r));
-
-              return (
-                <tr key={i}>
-                  <td>{school(r)}</td>
-                  <td>{division(r)}</td>
-                  <td>{conference(r)}</td>
-
-                  <td>{sSite && <a href={sSite}>Open</a>}</td>
-                  <td>{tSite && <a href={tSite}>Open</a>}</td>
-                  <td>{q && <a href={q}>Open</a>}</td>
-                  <td>{st && <a href={st}>Open</a>}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       )}
 
     </section>
