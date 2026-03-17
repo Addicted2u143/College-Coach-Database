@@ -136,6 +136,23 @@ function favKey(row: AnyRow) {
   return `${rowTab(row)}__${school(row)}`.toLowerCase();
 }
 
+function rowRenderKey(row: AnyRow, idx: number) {
+  return [
+    rowTab(row),
+    school(row),
+    division(row),
+    conference(row),
+    schoolSite(row),
+    teamSite(row),
+    questionnaire(row),
+    staff(row),
+    idx,
+  ]
+    .map((v) => String(v || "").trim())
+    .join("__")
+    .toLowerCase();
+}
+
 type SortBy = "school" | "division" | "conference";
 type SortDir = "asc" | "desc";
 
@@ -404,11 +421,12 @@ export default function Results(props: Props) {
             const ig = normalizeUrl(instagram(r));
             const fb = normalizeUrl(facebook(r));
 
-            const key = favKey(r) || `${tab}__${idx}`;
-            const isFav = favorites.has(key);
+            const renderKey = rowRenderKey(r, idx);
+            const fav = favKey(r) || `${tab}__${idx}`;
+            const isFav = favorites.has(fav);
 
             return (
-              <div key={key} className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4">
+              <div key={renderKey} className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-xl font-extrabold text-gray-900 break-words">
@@ -569,11 +587,12 @@ export default function Results(props: Props) {
                   const ig = normalizeUrl(instagram(r));
                   const fb = normalizeUrl(facebook(r));
 
-                  const key = favKey(r) || `${tab}__${idx}`;
-                  const isFav = favorites.has(key);
+                  const renderKey = rowRenderKey(r, idx);
+                  const fav = favKey(r) || `${tab}__${idx}`;
+                  const isFav = favorites.has(fav);
 
                   return (
-                    <tr key={key} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                    <tr key={renderKey} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                       <td className="px-4 py-3 font-semibold text-gray-900">{school(r) || "—"}</td>
                       <td className="px-4 py-3 text-gray-700">{division(r) || "—"}</td>
                       <td className="px-4 py-3 text-gray-700">{conference(r) || "—"}</td>
