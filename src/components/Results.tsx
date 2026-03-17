@@ -157,11 +157,33 @@ export default function Results(props: Props) {
                 </div>
 
                 {/* SOCIAL ICONS */}
-                <div className="flex gap-3 mt-3 text-xl">
-                  {tw && <a href={tw} target="_blank">🐦</a>}
-                  {ig && <a href={ig} target="_blank">📸</a>}
-                  {fb && <a href={fb} target="_blank">📘</a>}
-                </div>
+              <div className="flex gap-3 mt-3">
+
+  {tw && (
+    <a href={tw} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition">
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M18.244 2H21l-6.5 7.43L22 22h-6.828l-5.345-6.993L3.5 22H1l6.927-7.91L2 2h6.828l4.845 6.326L18.244 2Zm-2.394 18h1.885L8.394 4H6.41l9.44 16Z"/>
+      </svg>
+    </a>
+  )}
+
+  {ig && (
+    <a href={ig} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition">
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm4.25 5.5A4.75 4.75 0 1 0 16.75 12 4.76 4.76 0 0 0 12 7.5Zm6-1.75a1.25 1.25 0 1 0 1.25 1.25A1.25 1.25 0 0 0 18 5.75Z"/>
+      </svg>
+    </a>
+  )}
+
+  {fb && (
+    <a href={fb} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition">
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M13 22v-9h3l1-4h-4V7c0-1 .5-2 2-2h2V1.5S16.5 1 15 1c-3 0-5 2-5 5v3H7v4h3v9h3Z"/>
+      </svg>
+    </a>
+  )}
+
+</div>
 
               </div>
             );
