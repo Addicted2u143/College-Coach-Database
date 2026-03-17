@@ -86,26 +86,11 @@ function favKey(row: AnyRow) {
 }
 
 export default function Results({
-  tabs,
-  tab,
-  onTabChange,
   view,
-  onViewChange,
   rows,
-  loading,
-  favorites,
-  onToggleFavorite,
-}: Props) {
+}: Props)
 
-  // prevent unused variable build errors
-  void tabs;
-  void tab;
-  void onTabChange;
-  void view;
-  void onViewChange;
-  void loading;
-  void favorites;
-  void onToggleFavorite;
+
 
   const [search, setSearch] = useState("");
 
