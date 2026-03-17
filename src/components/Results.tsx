@@ -177,7 +177,7 @@ export default function Results(props: Props) {
   } = props;
 
   const [search, setSearch] = useState("");
-  const [conferenceFilter, setConferenceFilter] = useState("all");
+  const [divisionFilter, setDivisionFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortBy>("conference");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -186,22 +186,22 @@ export default function Results(props: Props) {
     return (rows || []).filter((r) => String(rowTab(r)) === t);
   }, [rows, tab]);
 
-  const conferences = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of tabRows) {
-      const c = String(conference(r) || "").trim();
-      if (c) set.add(c);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [tabRows]);
+  const divisions = useMemo(() => {
+  const set = new Set<string>();
+  for (const r of tabRows) {
+    const d = String(division(r) || "").trim();
+    if (d) set.add(d);
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}, [tabRows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const conf = conferenceFilter;
+   const div = divisionFilter;
 
-    let list = tabRows;
+let list = tabRows;
 
-    if (conf !== "all") list = list.filter((r) => String(conference(r)) === conf);
+if (div !== "all") list = list.filter((r) => String(division(r)) === div);
 
     if (q) {
       list = list.filter((r) => {
@@ -346,20 +346,21 @@ export default function Results(props: Props) {
           </div>
 
           <div>
-            <div className="text-xs font-bold text-gray-600">Conference</div>
-            <select
-              value={conferenceFilter}
-              onChange={(e) => setConferenceFilter(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-red-600/40"
-            >
-              <option value="all">All conferences</option>
-              {conferences.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div>
+  <div className="text-xs font-bold text-gray-600">Division</div>
+  <select
+    value={divisionFilter}
+    onChange={(e) => setDivisionFilter(e.target.value)}
+    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-red-600/40"
+  >
+    <option value="all">All divisions</option>
+    {divisions.map((d) => (
+      <option key={d} value={d}>
+        {d}
+      </option>
+    ))}
+  </select>
+</div>
 
           <div>
             <div className="text-xs font-bold text-gray-600">Sort</div>
