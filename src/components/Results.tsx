@@ -187,21 +187,23 @@ export default function Results(props: Props) {
   }, [rows, tab]);
 
   const divisions = useMemo(() => {
-  const set = new Set<string>();
-  for (const r of tabRows) {
-    const d = String(division(r) || "").trim();
-    if (d) set.add(d);
-  }
-  return Array.from(set).sort((a, b) => a.localeCompare(b));
-}, [tabRows]);
+    const set = new Set<string>();
+    for (const r of tabRows) {
+      const d = String(division(r) || "").trim();
+      if (d) set.add(d);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [tabRows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-   const div = divisionFilter;
+    const div = divisionFilter;
 
-let list = tabRows;
+    let list = tabRows;
 
-if (div !== "all") list = list.filter((r) => String(division(r)) === div);
+    if (div !== "all") {
+      list = list.filter((r) => String(division(r)) === div);
+    }
 
     if (q) {
       list = list.filter((r) => {
@@ -244,7 +246,7 @@ if (div !== "all") list = list.filter((r) => String(division(r)) === div);
       if (second !== 0) return second;
       return ca.localeCompare(cb) * dir;
     });
-  }, [tabRows, search, conferenceFilter, sortBy, sortDir]);
+  }, [tabRows, search, divisionFilter, sortBy, sortDir]);
 
   const groupedTabs = useMemo(() => {
     const order: string[] = [];
@@ -346,21 +348,20 @@ if (div !== "all") list = list.filter((r) => String(division(r)) === div);
           </div>
 
           <div>
-          <div>
-  <div className="text-xs font-bold text-gray-600">Division</div>
-  <select
-    value={divisionFilter}
-    onChange={(e) => setDivisionFilter(e.target.value)}
-    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-red-600/40"
-  >
-    <option value="all">All divisions</option>
-    {divisions.map((d) => (
-      <option key={d} value={d}>
-        {d}
-      </option>
-    ))}
-  </select>
-</div>
+            <div className="text-xs font-bold text-gray-600">Division</div>
+            <select
+              value={divisionFilter}
+              onChange={(e) => setDivisionFilter(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-red-600/40"
+            >
+              <option value="all">All divisions</option>
+              {divisions.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div>
             <div className="text-xs font-bold text-gray-600">Sort</div>
